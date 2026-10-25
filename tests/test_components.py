@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from src.config import Settings
+from src.generator import AnswerGenerator
 from src.ingest import normalize_ticket
 from src.router import route
 from src.schemas import Prediction, SourcePassage
@@ -50,3 +52,9 @@ def test_guardrails_block_private_data_and_commitments():
     results = validate(normalize_ticket(ticket()), "A refund will be issued. Key: sk-abcdefghijklmnop", ["DOC-1:0"], [source()])
     assert results["pii"] == "block"
     assert results["tone_scope"] == "block"
+
+
+def test_generator_loads_the_versioned_markdown_prompt():
+    settings = Settings(Path("Capstone_Pack/05_Datasets"), "sqlite:///unused.db", .55, .08, None, None, "test")
+    generator = AnswerGenerator(settings)
+    assert generator.system_prompt == Path("prompts/generation_v1.md").read_text().strip()
