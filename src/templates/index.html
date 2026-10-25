@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CloudServe Support Tester</title>
+    <style>
+      :root { color-scheme: light; font-family: Inter, system-ui, sans-serif; background: #f5f7fb; color: #172033; }
+      main { max-width: 920px; margin: 36px auto; padding: 0 20px; }
+      h1 { margin-bottom: 4px; } .lead { color: #526078; margin-top: 0; }
+      section { background: white; border: 1px solid #dce2ec; border-radius: 12px; padding: 22px; margin-top: 20px; box-shadow: 0 2px 8px #1720330d; }
+      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; } label { display: grid; gap: 6px; font-size: .9rem; font-weight: 650; }
+      input, select, textarea { box-sizing: border-box; width: 100%; padding: 10px; border: 1px solid #b9c3d3; border-radius: 7px; font: inherit; } textarea { min-height: 140px; resize: vertical; }
+      button { margin-top: 16px; background: #1f5eff; color: white; padding: 11px 17px; border: 0; border-radius: 7px; font-weight: 700; cursor: pointer; } button:disabled { opacity: .55; cursor: wait; }
+      pre { white-space: pre-wrap; overflow-wrap: anywhere; padding: 16px; background: #101827; color: #e7edf8; border-radius: 8px; min-height: 90px; }
+      .note { font-size: .88rem; color: #63708a; }
+      @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>CloudServe Support Tester</h1>
+      <p class="lead">Submit one support ticket through the same safety pipeline used by the API and batch evaluator.</p>
+      <section>
+        <form id="ticket-form">
+          <div class="grid">
+            <label>Ticket ID <input id="ticket_id" value="UI-001" required></label>
+            <label>Channel <select id="channel"><option value="email">Email</option><option value="chat">Live chat</option><option value="docs_comment">Documentation comment</option><option value="forum">Community forum</option></select></label>
+          </div>
+          <p></p><label>Subject <input id="subject" value="Cannot sign in to the console"></label>
+          <p></p><label>Message <textarea id="body" required>I receive an invalid credential error when I log in. What should I check?</textarea></label>
+          <button id="submit" type="submit">Process ticket</button>
+        </form>
+        <p class="note">Security, billing, compliance, data-residency, feature-request, and unclear tickets are intentionally escalated.</p>
+      </section>
+      <section>
+        <h2>Decision</h2>
+        <pre id="result">Submit a ticket to view the routing decision, sources, and guardrail results.</pre>
+      </section>
+    </main>
+    <script>
+      const form = document.querySelector('#ticket-form'); const button = document.querySelector('#submit'); const result = document.querySelector('#result');
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault(); button.disabled = true; result.textContent = 'Processing through support pipeline…';
+        const ticket = Object.fromEntries(['ticket_id','channel','subject','body'].map(id => [id, document.querySelector('#' + id).value]));
+        try { const response = await fetch('/tickets', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(ticket) }); const data = await response.json(); result.textContent = JSON.stringify(data, null, 2); }
+        catch (error) { result.textContent = `Request failed: ${error.message}`; }
+        finally { button.disabled = false; }
+      });
+    </script>
+  </body>
+</html>
