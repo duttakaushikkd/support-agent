@@ -23,9 +23,13 @@ small synthetic fixture is selected only when the real pack is absent so the API
 and tests can start from a clean checkout; it is not suitable for evaluation.
 
 An API key is optional. Without one, the system uses a deterministic local grounded
-response so that tests and unattended evaluation can still run. To use an
-OpenAI-compatible provider, add `OPENAI_API_KEY`, or `LLM_API_KEY`, `LLM_BASE_URL`,
-and `LLM_MODEL`, to `.env`.
+response so that tests and unattended evaluation can still run. To use Groq, set
+`GROQ_API_KEY` in `.env`; the default model is `llama-3.3-70b-versatile`. To use
+OpenRouter instead, set `LLM_PROVIDER=openrouter` and `OPENROUTER_API_KEY`; the
+default model is `openrouter/free`. You can override `LLM_MODEL` or the full chat
+completion endpoint with `LLM_BASE_URL`. The application calls the provider over
+HTTP directly and does not require a provider SDK. See the [Groq API reference](https://console.groq.com/docs/api-reference)
+and [OpenRouter chat completion documentation](https://openrouter.ai/docs/api/api-reference/chat/send-chat-completion-request).
 
 ## Run the API
 
