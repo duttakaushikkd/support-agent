@@ -11,8 +11,11 @@ ALWAYS_ESCALATE = {
 def route(prediction: Prediction, sources: list[SourcePassage], threshold: float) -> tuple[str, str]:
     if prediction.intent in ALWAYS_ESCALATE:
         return "escalate", f"{prediction.intent} requires human handling by policy"
-    if prediction.confidence < threshold:
-        return "escalate", f"classification confidence {prediction.confidence:.2f} is below threshold {threshold:.2f}"
+    if prediction.confidence < threshold or prediction.urgency_confidence < threshold:
+        return "escalate", (
+            f"intent confidence {prediction.confidence:.2f} or urgency confidence "
+            f"{prediction.urgency_confidence:.2f} is below threshold {threshold:.2f}"
+        )
     if not sources:
         return "escalate", "no documentation passage met the relevance threshold"
     return "auto_respond", "confidence and retrieval quality meet the auto-response policy"

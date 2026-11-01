@@ -39,14 +39,26 @@ class DecisionStore:
         Base.metadata.create_all(self.engine)
         self.session_factory = sessionmaker(self.engine, expire_on_commit=False)
 
-    def save(self, ticket: NormalizedTicket, result: DecisionResult, threshold: float) -> int:
+    def save(self, ticket: NormalizedTicket, result: DecisionResult, threshold: float,
+             model_name: str = "unknown") -> int:
         from datetime import datetime, timezone
         entry = DecisionLog(
             ticket_id=ticket.ticket_id, timestamp=datetime.now(timezone.utc).isoformat(),
-            input_summary=ticket.text[:1000], prediction_json=json.dumps(result.prediction.__dict__),
+            input_summary=json.dumps(ticket.to_dict(), ensure_ascii=False), prediction_json=json.dumps({
+                **result.prediction.__dict__,
+                "model": {"name": model_name, "version": model_name},
+                "prompt_version": "generation-v1",
+                "requirement_ids": ["FR-INGEST", "FR-CLASSIFY", "FR-RETRIEVE", "FR-ROUTE",
+                                    "FR-GENERATE", "FR-VALIDATE", "FR-LOG", "FR-EVALUATE"],
+            }),
             sources_json=json.dumps([source.to_dict() for source in result.sources]),
-            threshold_applied=threshold, action_taken=result.action, reason=result.reason,
+            threshold_applied=threshold, action_taken=result.action,
+            reason=(result.reason + (f" | escalation summary: {result.escalation_summary}"
+                                     if result.escalation_summary else "")),
             guardrail_results_json=json.dumps(result.guardrail_results),
+            prompt_version="generation-v1",
+            requirement_ids_json=json.dumps(["FR-INGEST", "FR-CLASSIFY", "FR-RETRIEVE", "FR-ROUTE",
+                                             "FR-GENERATE", "FR-VALIDATE", "FR-LOG", "FR-EVALUATE"]),
             latency_ms=result.latency_ms, error=result.error,
         )
         with self.session_factory() as session:

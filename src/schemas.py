@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from typing import Any, Literal
 
 
@@ -35,6 +35,8 @@ class Prediction:
     urgency: str
     confidence: float
     alternatives: list[dict[str, float | str]]
+    urgency_confidence: float = 0.0
+    urgency_alternatives: list[dict[str, float | str]] = field(default_factory=list)
 
 
 @dataclass

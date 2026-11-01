@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from time import sleep
 
@@ -34,7 +35,8 @@ class AnswerGenerator:
         """Deterministic grounded fallback keeps evaluation runnable without a provider."""
         source = sources[0]
         excerpt = " ".join(source.text.replace("#", "").split())[:700]
-        answer = f"Based on CloudServe documentation: {excerpt}\n\nSource: [{source.chunk_id}]"
+        sentences = [part.strip() for part in re.split(r"(?<=[.!?])\s+", excerpt) if part.strip()]
+        answer = " ".join(f"{sentence} [{source.chunk_id}]" for sentence in sentences)
         return answer, [source.chunk_id]
 
     def _provider_answer(self, ticket: NormalizedTicket, sources: list[SourcePassage]) -> tuple[str, list[str]]:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+from hashlib import sha256
 from pathlib import Path
 
 
@@ -14,7 +15,8 @@ class DocumentationRetriever:
     """Chroma-backed vector index with a deterministic local fallback."""
     def __init__(self, documentation_path: Path, threshold: float = 0.08):
         self.threshold = threshold
-        docs = json.loads(documentation_path.read_text())
+        raw_documents = documentation_path.read_text(encoding="utf-8")
+        docs = json.loads(raw_documents)
         self.passages: list[SourcePassage] = []
         for document in docs:
             sections = re.split(r"\n(?=#+\s|\d+\.\s)", document["content"])
@@ -30,7 +32,10 @@ class DocumentationRetriever:
             # Store the explicitly computed vectors, avoiding a model download at service startup.
             import chromadb
             client = chromadb.PersistentClient(path="runtime/chroma")
-            self.collection = client.get_or_create_collection("cloudserve_documentation", embedding_function=None)
+            corpus_key = sha256(raw_documents.encode("utf-8")).hexdigest()[:12]
+            self.collection = client.get_or_create_collection(
+                f"cloudserve_docs_{corpus_key}", embedding_function=None
+            )
             self.collection.upsert(
                 ids=[p.chunk_id for p in self.passages], documents=[p.text for p in self.passages],
                 metadatas=[{"doc_id": p.doc_id, "title": p.title} for p in self.passages],

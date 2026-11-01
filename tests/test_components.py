@@ -34,10 +34,10 @@ def test_unsupported_channel_is_rejected():
 
 
 def test_routing_is_deterministic_and_safe():
-    prediction = Prediction("authentication_failure", "high", 0.95, [])
+    prediction = Prediction("authentication_failure", "high", 0.95, [], 0.95)
     assert route(prediction, [source()], 0.8)[0] == "auto_respond"
     assert route(prediction, [source()], 0.8) == route(prediction, [source()], 0.8)
-    assert route(Prediction("security_incident", "high", 1.0, []), [source()], 0.8)[0] == "escalate"
+    assert route(Prediction("security_incident", "high", 1.0, [], 1.0), [source()], 0.8)[0] == "escalate"
     assert route(prediction, [], 0.8)[0] == "escalate"
 
 
@@ -55,6 +55,6 @@ def test_guardrails_block_private_data_and_commitments():
 
 
 def test_generator_loads_the_versioned_markdown_prompt():
-    settings = Settings(Path("Capstone_Pack/05_Datasets"), "sqlite:///unused.db", .55, .08, None, None, "test")
+    settings = Settings(Path(__file__).parent / "fixtures", "sqlite:///unused.db", .55, .08, None, None, "test")
     generator = AnswerGenerator(settings)
     assert generator.system_prompt == Path("prompts/generation_v1.md").read_text().strip()

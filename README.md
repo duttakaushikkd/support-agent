@@ -16,6 +16,12 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
+For a full run, make sure the capstone data pack is available under
+`FDE_Capstone_Complete/Capstone_Pack/05_Datasets` or set `DATA_DIR` in `.env` to
+the directory containing `development_tickets.json` and `documentation.json`. A
+small synthetic fixture is selected only when the real pack is absent so the API
+and tests can start from a clean checkout; it is not suitable for evaluation.
+
 An API key is optional. Without one, the system uses a deterministic local grounded
 response so that tests and unattended evaluation can still run. To use an
 OpenAI-compatible provider, add `OPENAI_API_KEY`, or `LLM_API_KEY`, `LLM_BASE_URL`,
@@ -35,12 +41,14 @@ the database, retrieval layer, and configured provider mode. Open
 
 ```bash
 python -m evaluation.harness \
-  --input Capstone_Pack/05_Datasets/validation_tickets.json \
+  --input FDE_Capstone_Complete/Capstone_Pack/05_Datasets/validation_tickets.json \
   --output evaluation/results
 ```
 
 This creates `decisions.json` and `metrics.json`. The input path is always explicit,
-so the same command works with a hidden evaluation file using the documented schema.
+so the same command works with an unseen evaluation file using the documented schema.
+The input path is independent of the training and documentation directory. Set
+`DATA_DIR` in `.env` when those files live somewhere else.
 
 ## Run tests
 
@@ -53,8 +61,10 @@ python -m pytest tests/ -v
 Security, compliance, feature-request, unclear-request, billing, and data-residency
 tickets always escalate. Automated answers require the conservative default confidence
 threshold of 0.55 (configure it with `AUTO_RESPONSE_THRESHOLD`) and relevant documentation.
-and relevant documentation. Guardrails block private data, unsupported citations,
-prompt-injection signals, and out-of-scope commitments. Every outcome is persisted in
+The classifier uses cross-validated sigmoid calibration; validate the routing threshold
+on a local holdout before reporting its operating point. Guardrails block private data,
+unsupported claims or invalid citations, prompt-injection signals, and out-of-scope
+commitments. Every outcome is persisted in
 SQLite (default: `runtime/support_agent.db`).
 
 ## Repository structure
@@ -63,4 +73,5 @@ The repository follows the submission guide: application code in `src/`, version
 prompts in `prompts/`, automated tests in `tests/`, the batch evaluator in
 `evaluation/`, architecture notes in `docs/`, sample-data guidance in `data/`, and
 the GitHub Actions test workflow in `.github/workflows/`. Capstone-provided datasets
-remain in `Capstone_Pack/05_Datasets` and are not duplicated.
+remain under `FDE_Capstone_Complete/Capstone_Pack/05_Datasets` in this workspace and
+are not duplicated into the application package.

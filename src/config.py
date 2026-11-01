@@ -20,8 +20,21 @@ class Settings:
     @classmethod
     def from_env(cls) -> "Settings":
         load_dotenv()
+        project_root = Path(__file__).resolve().parents[1]
+        configured_data_dir = os.getenv("DATA_DIR")
+        if configured_data_dir:
+            data_dir = Path(configured_data_dir).expanduser()
+            if not data_dir.is_absolute():
+                data_dir = project_root / data_dir
+        else:
+            candidates = (
+                project_root / "Capstone_Pack/05_Datasets",
+                project_root / "FDE_Capstone_Complete/Capstone_Pack/05_Datasets",
+                project_root / "tests/fixtures",
+            )
+            data_dir = next((path for path in candidates if (path / "development_tickets.json").exists()), candidates[0])
         return cls(
-            data_dir=Path(os.getenv("DATA_DIR", "Capstone_Pack/05_Datasets")),
+            data_dir=data_dir,
             database_url=os.getenv("DATABASE_URL", "sqlite:///runtime/support_agent.db"),
             auto_response_threshold=float(os.getenv("AUTO_RESPONSE_THRESHOLD", "0.55")),
             retrieval_threshold=float(os.getenv("RETRIEVAL_THRESHOLD", "0.08")),

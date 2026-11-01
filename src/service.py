@@ -52,15 +52,22 @@ class SupportService:
                     ", ".join(source.doc_id for source in sources) if sources else f"Intent: {prediction.intent}. {reason}."
             result = DecisionResult(ticket.ticket_id, action, reason, prediction, sources, answer, citations,
                                     escalation_summary, guardrails, (time.perf_counter() - started) * 1000)
-            result.decision_id = self.store.save(ticket, result, self.settings.auto_response_threshold)
+            result.decision_id = self.store.save(
+                ticket, result, self.settings.auto_response_threshold, self.generator.model_name
+            )
         except Exception as exc:
             # Every bad input becomes a durable escalation instead of terminating a batch run.
             from .schemas import NormalizedTicket
             ticket = NormalizedTicket(ticket_id=ticket_id, channel="unknown", subject="", body="")
             result = DecisionResult(ticket_id, "escalate", "ticket could not be processed safely",
                                     Prediction("unclear_request", "medium", 0.0, []), [], None, [],
-                                    "Malformed or failed ticket requires human review.", {"system": "error"},
+                                    "Malformed or failed ticket requires human review.",
+                                    {"pii": "not_run", "grounding": "not_run",
+                                     "instruction_integrity": "not_run", "tone_scope": "not_run",
+                                     "confidence_floor": "not_run", "system": "error"},
                                     (time.perf_counter() - started) * 1000, error=f"{type(exc).__name__}: {exc}")
-            result.decision_id = self.store.save(ticket, result, self.settings.auto_response_threshold)
+            result.decision_id = self.store.save(
+                ticket, result, self.settings.auto_response_threshold, self.generator.model_name
+            )
         observe(result.action, result.latency_ms)
         return result
