@@ -24,14 +24,19 @@ COMMITMENT_PATTERN = re.compile(
 TOKEN_PATTERN = re.compile(r"\b[a-z0-9][a-z0-9_-]{2,}\b", re.I)
 NON_CLAIM_WORDS = {
     "about", "after", "again", "also", "although", "another", "because", "before",
-    "being", "below", "between", "could", "does", "during", "each", "from", "have",
+    "being", "below", "between", "based", "could", "does", "during", "each", "from", "have",
     "here", "into", "more", "most", "only", "other", "please", "same", "should",
     "some", "than", "that", "their", "then", "there", "these", "they", "this",
     "those", "through", "under", "until", "using", "when", "where", "which", "while",
-    "with", "would", "your", "cloudserve", "based", "documentation", "source",
+    "with", "would", "your", "cloudserve", "documentation", "source", "support",
+    "thanks", "thank", "hello", "hi", "contacting", "reaching", "says",
 }
 SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+|\n+")
 CITATION_PATTERN = re.compile(r"\[([A-Za-z0-9_.:-]+)\]")
+
+
+def has_instruction_injection(text: str) -> bool:
+    return bool(INJECTION_PATTERN.search(text))
 
 
 def _sensitive_data_in_answer(answer: str, ticket: NormalizedTicket) -> bool:
@@ -55,7 +60,10 @@ def _claim_tokens(text: str) -> set[str]:
 
 def _claims_are_supported(answer: str, citations: list[str], sources: list[SourcePassage]) -> bool:
     source_by_id = {source.chunk_id: source for source in sources}
-    if not citations or not set(citations).issubset(source_by_id):
+    citations_in_text = set(CITATION_PATTERN.findall(answer))
+    if (not citations or not citations_in_text
+            or set(citations) != citations_in_text
+            or not set(citations).issubset(source_by_id)):
         return False
     factual_sentences = [s.strip() for s in SENTENCE_SPLIT.split(answer) if _claim_tokens(s)]
     if not factual_sentences:
@@ -87,7 +95,7 @@ def validate(ticket: NormalizedTicket, answer: str, citations: list[str], source
         results["pii"] = "block"
     if not _claims_are_supported(answer, citations, sources):
         results["grounding"] = "block"
-    if INJECTION_PATTERN.search(ticket.text):
+    if has_instruction_injection(ticket.text):
         results["instruction_integrity"] = "block"
     if COMMITMENT_PATTERN.search(answer):
         results["tone_scope"] = "block"

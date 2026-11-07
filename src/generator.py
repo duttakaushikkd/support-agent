@@ -32,14 +32,32 @@ class AnswerGenerator:
             except Exception:
                 # Model availability must never terminate a ticket or batch run.
                 pass
-        return self._fallback_answer(sources)
+        return self._fallback_answer(ticket, sources)
 
-    def _fallback_answer(self, sources: list[SourcePassage]) -> tuple[str, list[str]]:
+    def _fallback_answer(self, ticket: NormalizedTicket,
+                         sources: list[SourcePassage]) -> tuple[str, list[str]]:
         """Deterministic grounded fallback keeps evaluation runnable without a provider."""
         source = sources[0]
-        excerpt = " ".join(source.text.replace("#", "").split())[:700]
-        sentences = [part.strip() for part in re.split(r"(?<=[.!?])\s+", excerpt) if part.strip()]
-        answer = " ".join(f"{sentence} [{source.chunk_id}]" for sentence in sentences)
+        claims: list[str] = []
+        for line in source.text.splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or line.casefold().startswith("**applies to:"):
+                continue
+            line = re.sub(r"^\s*(?:[-*]\s+|\d+\.\s+)", "", line)
+            line = line.replace("**", "").replace("`", "").strip()
+            for sentence in re.split(r"(?<=[.!?])\s+", line):
+                sentence = sentence.strip()
+                if not sentence or not re.search(r"[A-Za-z0-9]", sentence):
+                    continue
+                punctuation = sentence[-1] if sentence.endswith((".", "!", "?")) else "."
+                sentence = sentence[:-1].rstrip() if sentence.endswith((".", "!", "?")) else sentence
+                claims.append(f"{sentence} [{source.chunk_id}]{punctuation}")
+                if len(claims) >= 5 or sum(map(len, claims)) >= 650:
+                    break
+            if len(claims) >= 5 or sum(map(len, claims)) >= 650:
+                break
+        facts = " ".join(claims)
+        answer = f"Thanks. {facts}" if facts else "Thanks. I could not find a complete instruction in the retrieved passage."
         return answer, [source.chunk_id]
 
     def _provider_answer(self, ticket: NormalizedTicket, sources: list[SourcePassage]) -> tuple[str, list[str]]:

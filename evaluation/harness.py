@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
+import subprocess
 from collections import Counter, defaultdict
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from statistics import mean, median
 from typing import Any
@@ -56,7 +58,7 @@ def _classification_metrics(decisions: list[dict], tickets: list[dict]) -> dict[
     for ticket, decision in zip(tickets, decisions):
         actual = _labels(ticket).get("intent")
         predicted = decision["prediction"]["intent"]
-        if actual in confusion and predicted in confusion[actual]:
+        if isinstance(actual, str) and isinstance(predicted, str) and actual in confusion and predicted in confusion[actual]:
             confusion[actual][predicted] += 1
     per_class: dict[str, dict[str, float | int | None]] = {}
     for label in labels:
@@ -119,7 +121,7 @@ def _retrieval_metrics(decisions: list[dict], tickets: list[dict]) -> dict[str, 
     for decision, ticket in zip(decisions, tickets):
         labels = _labels(ticket)
         raw_expected = labels.get("expected_doc_ids", [])
-        expected = set(raw_expected) if isinstance(raw_expected, list) else set()
+        expected = set(map(str, raw_expected)) if isinstance(raw_expected, list) else set()
         if not labels.get("answerable_from_docs", bool(expected)) or not expected:
             continue
         eligible += 1
@@ -133,31 +135,135 @@ def _business_metrics(decisions: list[dict], tickets: list[dict]) -> dict[str, A
     histories = [_history(ticket) for ticket in tickets]
     known_fcr = [h["first_contact_resolution"] for h in histories if isinstance(h.get("first_contact_resolution"), bool)]
     csat = [float(h["csat_rating"]) for h in histories if isinstance(h.get("csat_rating"), (int, float))]
-    escalations = sum(d["action"] in {"escalate", "block"} for d in decisions)
+    known_repeat = [h["repeat_contact"] for h in histories if isinstance(h.get("repeat_contact"), bool)]
+    escalations = sum(d["action"] == "escalate" for d in decisions)
     auto_answers = sum(d["action"] == "auto_respond" for d in decisions)
     latencies = [float(d["latency_ms"]) for d in decisions]
-    received = [_mapping(t).get("received_at") for t in tickets]
-    has_received_timestamps = sum(_parse_received_at(value) is not None for value in received)
+    reply_minutes = []
+    for ticket in tickets:
+        received_at = _parse_received_at(_mapping(ticket).get("received_at"))
+        reply_at = next((_parse_received_at(_mapping(ticket).get(key)) for key in
+                         ("first_reply_at", "replied_at", "responded_at", "reply_at")
+                         if _parse_received_at(_mapping(ticket).get(key)) is not None), None)
+        if received_at and reply_at:
+            try:
+                reply_minutes.append((reply_at - received_at).total_seconds() / 60)
+            except TypeError:
+                # Mixed timezone-naive/aware values cannot be compared safely.
+                continue
     return {
-        "first_contact_resolution_proxy": {
+        "system_first_contact_resolution": {
+            "rate": None,
+            "note": "The offline evaluator has no post-response resolution event, so system FCR cannot be observed from this input.",
+        },
+        "auto_response_coverage": {
             "rate": _ratio(auto_answers, len(decisions)),
             "auto_answered_tickets": auto_answers,
-            "method": "Auto-response coverage proxy; an automated answer is not proof the issue was resolved.",
+            "method": "Automatic response share; this is not first-contact resolution.",
         },
         "historical_ticket_outcomes": {
             "first_contact_resolution_rate": _ratio(sum(known_fcr), len(known_fcr)) if known_fcr else None,
             "observed_tickets": len(known_fcr),
+            "repeat_contact_rate": _ratio(sum(known_repeat), len(known_repeat)) if known_repeat else None,
+            "repeat_contact_observed_tickets": len(known_repeat),
         },
         "escalation_rate": _ratio(escalations, len(decisions)),
-        "mean_reply_time_minutes": None,
-        "median_reply_time_minutes": None,
-        "response_time_note": "No customer-visible send timestamp is available in this offline run. Runtime latency is reported under technical performance and is not presented as customer first-reply time.",
+        "mean_first_reply_minutes": mean(reply_minutes) if reply_minutes else None,
+        "median_first_reply_minutes": median(reply_minutes) if reply_minutes else None,
+        "observed_first_reply_timestamps": len(reply_minutes),
+        "response_time_note": "Computed only from received_at and first_reply_at/replied_at/responded_at/reply_at timestamps. Empty when no customer-visible reply timestamps exist.",
         "customer_satisfaction_proxy": {
             "mean_rating": mean(csat) if csat else None,
             "observed_tickets": len(csat),
             "source": "Historical ticket record only; this is not a rating of the system's new responses.",
         },
-        "input_tickets_with_received_at": has_received_timestamps,
+        "availability": {
+            "observed_percent": None,
+            "target_percent": 99.5,
+            "note": "Availability requires a time-based monitored service window; an offline batch run cannot establish it.",
+        },
+    }
+
+
+def _urgency_metrics(decisions: list[dict], tickets: list[dict]) -> dict[str, Any]:
+    labels = sorted({
+        value for ticket, decision in zip(tickets, decisions)
+        for value in (_labels(ticket).get("urgency"), decision["prediction"].get("urgency"))
+        if isinstance(value, str)
+    })
+    confusion = {actual: {predicted: 0 for predicted in labels} for actual in labels}
+    for ticket, decision in zip(tickets, decisions):
+        actual = _labels(ticket).get("urgency")
+        predicted = decision["prediction"].get("urgency")
+        if isinstance(actual, str) and isinstance(predicted, str) and actual in confusion and predicted in confusion[actual]:
+            confusion[actual][predicted] += 1
+    per_class = {}
+    for label in labels:
+        tp = confusion[label][label]
+        support = sum(confusion[label].values())
+        predicted_count = sum(confusion[actual][label] for actual in labels)
+        precision = _ratio(tp, predicted_count)
+        recall = _ratio(tp, support)
+        f1 = 2 * precision * recall / (precision + recall) if precision is not None and recall is not None and precision + recall else 0.0
+        per_class[label] = {"precision": precision, "recall": recall, "f1": f1, "support": support}
+    total = sum(sum(row.values()) for row in confusion.values())
+    correct = sum(confusion[label][label] for label in labels)
+    return {"evaluated_tickets": total, "accuracy": _ratio(correct, total),
+            "per_class": per_class, "confusion_matrix": confusion}
+
+
+def _ground_truth_metrics(decisions: list[dict], tickets: list[dict], path: Path | None) -> dict[str, Any]:
+    if path is None or not path.exists():
+        return {"available": False, "matched_tickets": 0,
+                "note": "No ground-truth response file was found. Reference answers are never used as runtime replies."}
+    records = json.loads(path.read_text(encoding="utf-8"))
+    reference_by_id = {str(row.get("ticket_id")): row for row in records if isinstance(row, dict) and row.get("ticket_id")}
+    matched = 0
+    answered = 0
+    expected_doc_eligible = 0
+    expected_doc_hits = 0
+    mention_obligations = 0
+    mention_met = 0
+    forbidden_claims = 0
+    for ticket, decision in zip(tickets, decisions):
+        reference = reference_by_id.get(str(_mapping(ticket).get("ticket_id", "")))
+        if reference is None:
+            continue
+        matched += 1
+        answer = decision.get("answer")
+        if decision.get("action") != "auto_respond" or not isinstance(answer, str):
+            continue
+        answered += 1
+        answer_folded = " ".join(answer.casefold().split())
+        expected = reference.get("expected_doc_ids", [])
+        expected = expected if isinstance(expected, list) else []
+        if expected:
+            expected_doc_eligible += 1
+            found = {str(source.get("doc_id")) for source in decision.get("sources", []) if isinstance(source, dict)}
+            expected_doc_hits += bool(set(map(str, expected)) & found)
+        mentions = reference.get("must_mention", [])
+        mentions = [mentions] if isinstance(mentions, str) else mentions if isinstance(mentions, list) else []
+        for phrase in mentions:
+            if not isinstance(phrase, str) or not phrase.strip():
+                continue
+            mention_obligations += 1
+            mention_met += " ".join(phrase.casefold().split()) in answer_folded
+        forbidden = reference.get("must_not_claim", [])
+        forbidden = [forbidden] if isinstance(forbidden, str) else forbidden if isinstance(forbidden, list) else []
+        if any(isinstance(phrase, str) and phrase.strip()
+               and " ".join(phrase.casefold().split()) in answer_folded for phrase in forbidden):
+            forbidden_claims += 1
+    return {
+        "available": True,
+        "matched_tickets": matched,
+        "auto_responses_with_reference": answered,
+        "expected_document_hit_rate": _ratio(expected_doc_hits, expected_doc_eligible),
+        "expected_document_eligible_answers": expected_doc_eligible,
+        "must_mention_phrase_coverage": _ratio(mention_met, mention_obligations),
+        "must_mention_obligations": mention_obligations,
+        "answers_with_exact_must_not_claim_phrase": forbidden_claims,
+        "method": "Ticket-ID join; exact normalized phrase checks for must_mention and must_not_claim. This does not assess semantic quality.",
+        "reference_response_used_for_generation": False,
     }
 
 
@@ -191,12 +297,17 @@ def _guardrail_metrics(decisions: list[dict]) -> dict[str, Any]:
     }
 
 
-def evaluate(input_path: Path, output_dir: Path) -> dict[str, Any]:
-    tickets = json.loads(input_path.read_text(encoding="utf-8"))
+def evaluate(input_path: Path, output_dir: Path,
+             ground_truth_path: Path | None = None) -> dict[str, Any]:
+    started_at = datetime.now(timezone.utc)
+    input_bytes = input_path.read_bytes()
+    tickets = json.loads(input_bytes.decode("utf-8"))
     if not isinstance(tickets, list):
         raise ValueError("Input must be a JSON list of tickets")
     output_dir.mkdir(parents=True, exist_ok=True)
     service = SupportService()
+    if ground_truth_path is None:
+        ground_truth_path = service.settings.ground_truth_path
     decisions = [service.process(ticket).to_dict() for ticket in tickets]
     (output_dir / "decisions.json").write_text(json.dumps(decisions, indent=2), encoding="utf-8")
 
@@ -242,6 +353,16 @@ def evaluate(input_path: Path, output_dir: Path) -> dict[str, Any]:
 
     report = {
         "input_file": input_path.name,
+        "evaluation_metadata": {
+            "started_at_utc": started_at.isoformat(),
+            "finished_at_utc": datetime.now(timezone.utc).isoformat(),
+            "tickets_in_run": len(decisions),
+            "invocation_count": 1,
+            "input_sha256": hashlib.sha256(input_bytes).hexdigest(),
+            "system_version": _system_version(),
+            "source_sha256": _source_hash(),
+            "ground_truth_file": ground_truth_path.name if ground_truth_path and ground_truth_path.exists() else None,
+        },
         "volume": {
             "processed": len(decisions), "answered_automatically": actions["auto_respond"],
             "escalated": actions["escalate"], "blocked_by_guardrails": actions["block"],
@@ -249,13 +370,10 @@ def evaluate(input_path: Path, output_dir: Path) -> dict[str, Any]:
         "business": _business_metrics(decisions, tickets),
         "technical": {
             "intent_classification": _classification_metrics(decisions, tickets),
+            "urgency_classification": _urgency_metrics(decisions, tickets),
             "intent_confidence_calibration": _confidence_calibration(decisions, tickets),
-            "urgency_accuracy": _ratio(
-                sum(d["prediction"]["urgency"] == _labels(t).get("urgency") for d, t in zip(decisions, tickets)
-                    if _labels(t).get("urgency")),
-                sum(bool(_labels(t).get("urgency")) for t in tickets),
-            ),
             "expected_document_retrieval": _retrieval_metrics(decisions, tickets),
+            "ground_truth_response_checks": _ground_truth_metrics(decisions, tickets, ground_truth_path),
             "route_accuracy_against_labels": {"accuracy": route_accuracy, "labeled_tickets": len(route_rows)},
             "latency_ms": {"mean": mean(latencies) if latencies else 0.0,
                            "median": median(latencies) if latencies else 0.0,
@@ -282,8 +400,35 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Run CloudServe support evaluation unattended")
     parser.add_argument("--input", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--ground-truth", type=Path, default=None,
+                        help="Optional ground_truth_responses.json for ticket-ID-matched response checks")
     args = parser.parse_args()
-    print(json.dumps(evaluate(args.input, args.output), indent=2))
+    print(json.dumps(evaluate(args.input, args.output, args.ground_truth), indent=2))
+
+
+def _system_version() -> str:
+    try:
+        commit = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"], stderr=subprocess.DEVNULL, text=True
+        ).strip()
+        dirty = subprocess.check_output(
+            ["git", "status", "--porcelain"], stderr=subprocess.DEVNULL, text=True
+        ).strip()
+        return commit + ("+dirty" if dirty else "")
+    except (OSError, subprocess.CalledProcessError):
+        return "working-tree"
+
+
+def _source_hash() -> str:
+    digest = hashlib.sha256()
+    root = Path(__file__).resolve().parents[1]
+    paths = sorted([*root.joinpath("src").glob("*.py"),
+                    *root.joinpath("prompts").glob("*.md"),
+                    root / "evaluation" / "harness.py"])
+    for path in paths:
+        digest.update(path.relative_to(root).as_posix().encode("utf-8"))
+        digest.update(path.read_bytes())
+    return digest.hexdigest()
 
 
 if __name__ == "__main__":
