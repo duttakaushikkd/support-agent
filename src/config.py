@@ -73,7 +73,7 @@ class Settings:
             database_url=os.getenv("DATABASE_URL", "sqlite:///runtime/support_agent.db"),
             auto_response_threshold=float(os.getenv("AUTO_RESPONSE_THRESHOLD", "0.55")),
             retrieval_threshold=float(os.getenv("RETRIEVAL_THRESHOLD", "0.08")),
-            llm_api_key=provider_key or os.getenv("LLM_API_KEY") or None,
+            llm_api_key=provider_key or None,
             llm_base_url=os.getenv("LLM_BASE_URL") or default_endpoint,
             llm_model=os.getenv("LLM_MODEL") or default_model,
             llm_provider=provider,
