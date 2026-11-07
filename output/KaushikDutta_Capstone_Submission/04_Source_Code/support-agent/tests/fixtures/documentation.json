@@ -1,0 +1,3 @@
+[
+  {"doc_id":"TEST-AUTH-001","title":"Resolve login credential errors","category":"authentication","applies_to":"Console","content":"## Resolve login credential errors\n\nIf the console rejects valid credentials, clear the stale browser session and sign in again. If the account remains locked, contact CloudServe support for help."}
+]

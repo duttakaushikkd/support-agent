@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <title>CloudServe Support</title>
+    <style>
+      :root { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #172033; background: #f4f6fa; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; }
+      .app { width: min(100%, 1000px); margin: 0 auto; padding: 28px 18px 38px; }
+      header { display: flex; justify-content: space-between; align-items: center; gap: 18px; margin-bottom: 20px; }
+      .brand { display: flex; align-items: center; gap: 12px; }
+      .mark { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 13px; color: white; background: #245be8; font-weight: 800; letter-spacing: -.04em; }
+      h1 { margin: 0; font-size: 1.22rem; letter-spacing: -.02em; }
+      .subtitle { margin: 4px 0 0; color: #64718a; font-size: .9rem; }
+      .connection { display: flex; align-items: center; gap: 7px; color: #526078; font-size: .82rem; }
+      .dot { width: 8px; height: 8px; border-radius: 50%; background: #c28a12; }
+      .dot.ready { background: #16845b; }
+      .panel { background: white; border: 1px solid #dfe5ef; border-radius: 16px; box-shadow: 0 8px 30px #1927440a; overflow: hidden; }
+      .chat-head { padding: 15px 20px; border-bottom: 1px solid #e9edf4; display: flex; justify-content: space-between; align-items: center; }
+      .chat-head strong { font-size: .94rem; }
+      .chat-head span { font-size: .78rem; color: #738098; }
+      #conversation { min-height: 310px; max-height: 56vh; overflow-y: auto; padding: 22px; display: flex; flex-direction: column; gap: 15px; background: linear-gradient(180deg,#fbfcfe,#fff 30%); }
+      .message { max-width: min(78%, 680px); display: flex; flex-direction: column; gap: 5px; }
+      .message.user { align-self: flex-end; align-items: flex-end; }
+      .message.assistant { align-self: flex-start; align-items: flex-start; }
+      .bubble { padding: 12px 15px; border-radius: 15px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; font-size: .94rem; }
+      .user .bubble { background: #245be8; color: white; border-bottom-right-radius: 5px; }
+      .assistant .bubble { background: #eef2f8; color: #19243a; border-bottom-left-radius: 5px; }
+      .message-meta { color: #7a879c; font-size: .72rem; padding: 0 4px; }
+      .intro { max-width: 680px; padding: 16px; border: 1px solid #e1e7f1; border-radius: 13px; background: white; color: #526078; line-height: 1.55; font-size: .9rem; }
+      .decision { width: min(78%, 680px); align-self: flex-start; padding: 13px 15px; border-radius: 12px; border: 1px solid #dfe5ef; background: white; font-size: .86rem; line-height: 1.5; }
+      .decision.auto { border-left: 4px solid #16845b; }
+      .decision.escalate { border-left: 4px solid #c28a12; }
+      .decision.block { border-left: 4px solid #ce4545; }
+      .decision-title { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; font-weight: 750; text-transform: capitalize; }
+      .decision p { margin: 4px 0; color: #4e5b72; }
+      details { margin-top: 9px; }
+      summary { cursor: pointer; color: #245be8; font-weight: 650; }
+      .source { padding: 9px 0; border-top: 1px solid #edf0f5; }
+      .source-title { font-weight: 700; }
+      .source-id { color: #6b7890; font-size: .75rem; }
+      .source-text { color: #4e5b72; margin-top: 4px; white-space: pre-wrap; }
+      .composer { border-top: 1px solid #e9edf4; padding: 16px 18px 12px; }
+      .metadata { display: grid; grid-template-columns: 1.1fr 1fr 1fr 1fr; gap: 9px; margin-bottom: 11px; }
+      label { display: grid; gap: 5px; color: #65728a; font-size: .73rem; font-weight: 650; }
+      input, select, textarea { width: 100%; border: 1px solid #d7deea; background: white; border-radius: 9px; padding: 9px 10px; color: #172033; font: inherit; font-size: .86rem; outline: none; }
+      input:focus, select:focus, textarea:focus { border-color: #7395f2; box-shadow: 0 0 0 3px #245be81c; }
+      textarea { min-height: 82px; max-height: 180px; resize: vertical; line-height: 1.45; }
+      .send-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
+      .hint { color: #7a879c; font-size: .74rem; }
+      button { border: 0; border-radius: 9px; padding: 10px 16px; background: #245be8; color: white; font: inherit; font-size: .87rem; font-weight: 700; cursor: pointer; }
+      button:hover { background: #174bd0; }
+      button:disabled { opacity: .55; cursor: wait; }
+      .secondary { border: 1px solid #d7deea; background: white; color: #526078; padding: 7px 10px; font-size: .77rem; }
+      .secondary:hover { background: #f4f6fa; }
+      .error { color: #a32c2c; }
+      @media (max-width: 680px) {
+        .app { padding: 16px 10px 24px; }
+        header { align-items: flex-start; }
+        .connection { padding-top: 9px; }
+        #conversation { padding: 16px 12px; min-height: 280px; }
+        .message, .decision { max-width: 94%; width: 94%; }
+        .metadata { grid-template-columns: 1fr 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <header>
+        <div class="brand"><div class="mark">CS</div><div><h1>CloudServe Support</h1><p class="subtitle">Documentation-backed ticket assistant</p></div></div>
+        <div class="connection"><span id="health-dot" class="dot"></span><span id="health-text">Checking service…</span></div>
+      </header>
+      <section class="panel" aria-label="Support chat">
+        <div class="chat-head"><strong>Support conversation</strong><button class="secondary" id="new-chat" type="button">New conversation</button></div>
+        <div id="conversation" aria-live="polite" aria-label="Conversation">
+          <div class="intro">Hi, I’m the CloudServe support assistant. Describe the issue you’re having. I’ll check the support documentation and either share a cited answer or prepare the ticket for a support agent.</div>
+        </div>
+        <form class="composer" id="ticket-form">
+          <div class="metadata">
+            <label>Ticket ID<input id="ticket_id" maxlength="128" required></label>
+            <label>Channel<select id="channel"><option value="chat">Live chat</option><option value="email">Email</option><option value="docs_comment">Documentation comment</option><option value="forum">Community forum</option></select></label>
+            <label>Customer tier<select id="customer_tier"><option value="standard">Standard</option><option value="business">Business</option><option value="enterprise">Enterprise</option></select></label>
+            <label>Language<select id="language_fluency"><option value="fluent">Fluent English</option><option value="non_fluent">Non-fluent English</option></select></label>
+          </div>
+          <label>Subject<input id="subject" maxlength="300" placeholder="A short summary (optional)"></label>
+          <label style="margin-top:10px">Message<textarea id="body" maxlength="12000" required placeholder="Tell us what happened and what you have tried…"></textarea></label>
+          <div class="send-row"><span class="hint">Each message is submitted as one ticket and checked by the same API safety pipeline.</span><button id="send" type="submit">Send ticket</button></div>
+        </form>
+      </section>
+    </main>
+    <script>
+      const form = document.querySelector('#ticket-form');
+      const conversation = document.querySelector('#conversation');
+      const sendButton = document.querySelector('#send');
+      const ticketInput = document.querySelector('#ticket_id');
+      const bodyInput = document.querySelector('#body');
+      let nextId = 1;
+
+      function setNextId() {
+        ticketInput.value = `WEB-${String(nextId++).padStart(4, '0')}`;
+      }
+      function addMessage(kind, text, meta) {
+        const item = document.createElement('div');
+        item.className = `message ${kind}`;
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble';
+        bubble.textContent = text;
+        const caption = document.createElement('div');
+        caption.className = 'message-meta';
+        caption.textContent = meta || (kind === 'user' ? 'You' : 'CloudServe assistant');
+        item.append(bubble, caption);
+        conversation.append(item);
+        conversation.scrollTop = conversation.scrollHeight;
+        return item;
+      }
+      function addDecision(data) {
+        const card = document.createElement('section');
+        card.className = `decision ${data.action === 'auto_respond' ? 'auto' : data.action === 'block' ? 'block' : 'escalate'}`;
+        const title = document.createElement('div');
+        title.className = 'decision-title';
+        title.textContent = data.action === 'auto_respond' ? 'Answer from support documentation' : data.action === 'block' ? 'Response blocked' : 'Prepared for a support agent';
+        const reason = document.createElement('p');
+        reason.textContent = data.action === 'auto_respond' ? 'The policy checks passed for this response.' : (data.reason || 'This ticket needs human support.');
+        card.append(title, reason);
+        if (data.action === 'auto_respond' && data.answer) {
+          const answer = document.createElement('p');
+          answer.textContent = data.answer;
+          card.append(answer);
+        } else if (data.escalation_summary) {
+          const summary = document.createElement('p');
+          summary.textContent = data.escalation_summary;
+          card.append(summary);
+        }
+        if (Array.isArray(data.sources) && data.sources.length) {
+          const details = document.createElement('details');
+          const summary = document.createElement('summary');
+          summary.textContent = `Sources considered (${data.sources.length})`;
+          details.append(summary);
+          for (const source of data.sources) {
+            const row = document.createElement('div');
+            row.className = 'source';
+            const sourceTitle = document.createElement('div');
+            sourceTitle.className = 'source-title';
+            sourceTitle.textContent = source.title || source.doc_id || 'Documentation source';
+            const sourceId = document.createElement('div');
+            sourceId.className = 'source-id';
+            sourceId.textContent = `${source.chunk_id || ''} · relevance ${Number(source.score || 0).toFixed(3)}`;
+            const sourceText = document.createElement('div');
+            sourceText.className = 'source-text';
+            sourceText.textContent = source.text || '';
+            row.append(sourceTitle, sourceId, sourceText);
+            details.append(row);
+          }
+          card.append(details);
+        }
+        const diagnostics = document.createElement('details');
+        const diagnosticsTitle = document.createElement('summary');
+        diagnosticsTitle.textContent = 'Decision details';
+        const diagnosticsBody = document.createElement('pre');
+        diagnosticsBody.textContent = JSON.stringify({
+          ticket_id: data.ticket_id, action: data.action, prediction: data.prediction,
+          citations: data.citations, guardrail_results: data.guardrail_results,
+          latency_ms: data.latency_ms, decision_id: data.decision_id,
+        }, null, 2);
+        diagnostics.append(diagnosticsTitle, diagnosticsBody);
+        card.append(diagnostics);
+        conversation.append(card);
+        conversation.scrollTop = conversation.scrollHeight;
+      }
+      async function checkHealth() {
+        try {
+          const response = await fetch('/health');
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.detail || 'Service unavailable');
+          document.querySelector('#health-dot').classList.add('ready');
+          document.querySelector('#health-text').textContent = 'Service ready';
+        } catch (_) {
+          document.querySelector('#health-text').textContent = 'Service unavailable';
+        }
+      }
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const body = bodyInput.value.trim();
+        if (!body) return;
+        const ticket = {
+          ticket_id: ticketInput.value.trim(),
+          channel: document.querySelector('#channel').value,
+          customer_tier: document.querySelector('#customer_tier').value,
+          language_fluency: document.querySelector('#language_fluency').value,
+          subject: document.querySelector('#subject').value.trim(),
+          body,
+        };
+        addMessage('user', body, `${ticket.ticket_id} · ${ticket.channel}`);
+        const pending = addMessage('assistant', 'Checking the support documentation…');
+        sendButton.disabled = true;
+        try {
+          const response = await fetch('/ticket', {
+            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(ticket),
+          });
+          const data = await response.json();
+          pending.remove();
+          if (!response.ok) throw new Error(data.detail || `Request failed (${response.status})`);
+          addDecision(data);
+          bodyInput.value = '';
+          document.querySelector('#subject').value = '';
+          setNextId();
+        } catch (error) {
+          pending.remove();
+          const message = addMessage('assistant', `I could not submit this ticket: ${error.message}`);
+          message.classList.add('error');
+        } finally {
+          sendButton.disabled = false;
+          bodyInput.focus();
+        }
+      });
+      document.querySelector('#new-chat').addEventListener('click', () => {
+        conversation.replaceChildren();
+        const intro = document.createElement('div');
+        intro.className = 'intro';
+        intro.textContent = 'Start a new support conversation. Each message is submitted as a ticket and may be answered from documentation or routed to an agent.';
+        conversation.append(intro);
+        setNextId();
+        bodyInput.focus();
+      });
+      setNextId();
+      checkHealth();
+    </script>
+  </body>
+</html>

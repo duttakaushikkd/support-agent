@@ -1,0 +1,11 @@
+[
+  {"ticket_id":"FIX-1","channel":"email","subject":"Password reset","body":"I cannot log in after resetting my password","labels":{"intent":"authentication_failure","urgency":"medium"}},
+  {"ticket_id":"FIX-2","channel":"chat","subject":"Invalid credentials","body":"The console rejects my valid credentials","labels":{"intent":"authentication_failure","urgency":"high"}},
+  {"ticket_id":"FIX-3","channel":"forum","subject":"Login problem","body":"Please help me sign in to the dashboard","labels":{"intent":"authentication_failure","urgency":"low"}},
+  {"ticket_id":"FIX-4","channel":"email","subject":"Security incident","body":"Someone accessed our account without permission","labels":{"intent":"security_incident","urgency":"high"}},
+  {"ticket_id":"FIX-5","channel":"chat","subject":"Possible account compromise","body":"We found an unknown login to our production account","labels":{"intent":"security_incident","urgency":"high"}},
+  {"ticket_id":"FIX-6","channel":"forum","subject":"Unauthorized activity","body":"An unknown person changed our account settings","labels":{"intent":"security_incident","urgency":"medium"}},
+  {"ticket_id":"FIX-7","channel":"email","subject":"Login help","body":"My account sign in is not working today","labels":{"intent":"authentication_failure","urgency":"low"}},
+  {"ticket_id":"FIX-8","channel":"chat","subject":"Security alert","body":"An unfamiliar user may have accessed our workspace","labels":{"intent":"security_incident","urgency":"medium"}},
+  {"ticket_id":"FIX-9","channel":"forum","subject":"Account access warning","body":"We noticed a suspicious login from an unknown user","labels":{"intent":"security_incident","urgency":"low"}}
+]
