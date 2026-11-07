@@ -29,6 +29,8 @@ def test_service_logs_each_decision(tmp_path):
         row = session.scalar(select(DecisionLog))
         assert row.stage == "routing"
         assert row.channel == "email"
+        assert row.threshold_applied == 0.0
+        assert row.urgency_threshold_applied == 0.45
         assert row.model_name
         assert row.model_version
         assert row.prompt_version == "generation-v1"
@@ -49,7 +51,11 @@ def test_api_exposes_health_and_ticket_routes(monkeypatch, tmp_path):
     api.service = None
     client = TestClient(app)
     assert client.get("/").status_code == 200
-    assert "fetch('/ticket'" in client.get("/").text
+    page = client.get("/").text
+    assert "fetch('/ticket'" in page
+    assert "This ticket has been sent for human review." in page
+    assert "Sources considered" not in page
+    assert "Decision details" not in page
     assert client.get("/health").status_code == 200
     assert "support_tickets_processed_total" in client.get("/metrics").text
     response = client.post("/ticket", json={"ticket_id": "API-1", "channel": "chat", "subject": "", "body": "Cannot log in"})
@@ -61,6 +67,34 @@ def test_api_exposes_health_and_ticket_routes(monkeypatch, tmp_path):
     assert malformed.status_code == 422
     invalid_json = client.post("/ticket", content=b"{malformed", headers={"Content-Type": "application/json"})
     assert invalid_json.status_code == 422
+
+
+def test_login_example_auto_responds_via_api(monkeypatch, tmp_path):
+    import src.api as api
+    settings = Settings(
+        data_dir=ROOT / "FDE_Capstone_Complete/Capstone_Pack/05_Datasets",
+        database_url=f"sqlite:///{tmp_path / 'login-api.db'}",
+        auto_response_threshold=0.60,
+        retrieval_threshold=0.08,
+        llm_api_key=None,
+        llm_base_url=None,
+        llm_model="test",
+        chroma_path=tmp_path / "chroma",
+        auto_response_urgency_threshold=0.45,
+    )
+    monkeypatch.setattr(api, "service", SupportService(settings))
+    response = TestClient(app).post("/ticket", json={
+        "ticket_id": "LOCAL-LOGIN-001",
+        "channel": "chat",
+        "subject": "Invalid credentials when logging in",
+        "body": "I cannot log in to the console. It says invalid credentials even though my password is correct. What should I check?",
+    })
+    assert response.status_code == 200
+    result = response.json()
+    assert result["action"] == "auto_respond", result["reason"]
+    assert result["answer"]
+    assert result["citations"]
+    assert result["sources"][0]["doc_id"] == "DOC-AUTH-001"
 
 
 def test_kill_switch_forces_escalation_and_is_logged(tmp_path):

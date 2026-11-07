@@ -66,16 +66,28 @@ Important settings:
 | `LLM_BASE_URL` | provider default | Optional chat-completions endpoint override. |
 | `DATABASE_URL` | `sqlite:///runtime/support_agent.db` | Persistent decision log. |
 | `CHROMA_PATH` | `runtime/chroma` | Persistent local Chroma index. |
-| `AUTO_RESPONSE_THRESHOLD` | `0.55` | Provisional fixed routing floor applied to both intent and urgency confidence. |
+| `AUTO_RESPONSE_THRESHOLD` | `0.60` | Provisional intent confidence floor selected on a stratified development holdout. |
+| `AUTO_RESPONSE_URGENCY_THRESHOLD` | `0.45` | Separate urgency confidence floor selected on the same holdout because urgency scores are less separable. |
 | `RETRIEVAL_THRESHOLD` | `0.08` | Minimum TF-IDF relevance score for returned passages. |
 | `CHUNK_SIZE` / `CHUNK_OVERLAP` | `800` / `120` | Character window and overlap selected from the documented development-only ablation. |
 | `AUTO_RESPONSE_KILL_SWITCH_FILE` | `runtime/auto_response.disabled` | If this file exists, would-be automatic replies route to a human. |
 | `GROUND_TRUTH_PATH` | `DATA_DIR/ground_truth_responses.json` if present | Optional evaluation rubric; accepts the singular legacy filename too. |
 
-The 0.55 score floor is a conservative project policy value, not a guarantee that
-scores are calibrated. The harness reports calibration error so it can be assessed
-against the five percentage point target. Do not describe a confidence score as an
-actual probability without calibration evidence.
+The two score floors are provisional policy values selected on a stratified 20%
+holdout of the development data. In that 100-ticket holdout, the selected floors
+(0.60 intent, 0.45 urgency) yielded 52% auto-response coverage and 82.7% precision
+against the dataset's expected-route labels; the shared 0.55 floor yielded 18%
+coverage. These scores are not a guarantee of live performance: urgency accuracy was
+41% on this holdout and intent confidence calibration remains imperfect. Do not
+describe either confidence score as a calibrated probability guarantee.
+
+Reproduce the routing threshold audit with:
+
+```bash
+python -m evaluation.routing_threshold_audit \
+  --data-dir FDE_Capstone_Complete/Capstone_Pack/05_Datasets \
+  --output evaluation/results/routing-threshold-audit.json
+```
 
 ## Start the API and chat interface
 
@@ -89,10 +101,10 @@ uvicorn src.api:app --reload
 
 Open [http://127.0.0.1:8000](http://127.0.0.1:8000) for the chat interface. Choose a
 channel and customer metadata, enter the subject and message, and send the ticket.
-The browser submits one ticket at a time to `POST /ticket`. The interface shows the
-assistant draft or escalation/block decision, the sources considered, confidence,
-citations, guardrail results, and the SQLite decision ID. User-entered text is
-rendered as text, not HTML.
+The browser submits one ticket at a time to `POST /ticket`. It displays only the
+answer when the action is `auto_respond`; otherwise it says the ticket has been sent
+for human review. The API still returns detailed decision data for integrations and
+auditing. User-entered text is rendered as text, not HTML.
 
 Other endpoints:
 
@@ -184,8 +196,9 @@ development labels, not final assessment results.
 
 SQLite stores one record per processed ticket, including timestamp, channel, stage,
 normalized input, classifier values and alternatives, retrieved passages and scores,
-threshold, model and version, action, reason, prompt version, requirement IDs,
-guardrail results, latency, and any processing error. Existing SQLite files are
+separate intent and urgency thresholds, model and version, action, reason, prompt
+version, requirement IDs, guardrail results, latency, and any processing error.
+Existing SQLite files are
 upgraded additively when the service starts. The evaluator reconciles its output
 decisions with non-null persistent decision IDs.
 

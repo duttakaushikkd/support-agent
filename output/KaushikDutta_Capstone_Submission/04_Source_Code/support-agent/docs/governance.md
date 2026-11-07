@@ -2,8 +2,9 @@
 
 ## Operating policy
 
-The service may automatically answer only when the ticket is within policy, intent and
-urgency confidence meet `AUTO_RESPONSE_THRESHOLD`, retrieval finds documentation above
+The service may automatically answer only when the ticket is within policy, intent
+confidence meets `AUTO_RESPONSE_THRESHOLD`, urgency confidence meets
+`AUTO_RESPONSE_URGENCY_THRESHOLD`, retrieval finds documentation above
 `RETRIEVAL_THRESHOLD`, and response validation passes. Security incidents, compliance
 requests, feature requests, unclear requests, billing queries, and data-residency
 requests always go to a human. A blocked response is not sent; the ticket is escalated

@@ -31,18 +31,6 @@
       .assistant .bubble { background: #eef2f8; color: #19243a; border-bottom-left-radius: 5px; }
       .message-meta { color: #7a879c; font-size: .72rem; padding: 0 4px; }
       .intro { max-width: 680px; padding: 16px; border: 1px solid #e1e7f1; border-radius: 13px; background: white; color: #526078; line-height: 1.55; font-size: .9rem; }
-      .decision { width: min(78%, 680px); align-self: flex-start; padding: 13px 15px; border-radius: 12px; border: 1px solid #dfe5ef; background: white; font-size: .86rem; line-height: 1.5; }
-      .decision.auto { border-left: 4px solid #16845b; }
-      .decision.escalate { border-left: 4px solid #c28a12; }
-      .decision.block { border-left: 4px solid #ce4545; }
-      .decision-title { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; font-weight: 750; text-transform: capitalize; }
-      .decision p { margin: 4px 0; color: #4e5b72; }
-      details { margin-top: 9px; }
-      summary { cursor: pointer; color: #245be8; font-weight: 650; }
-      .source { padding: 9px 0; border-top: 1px solid #edf0f5; }
-      .source-title { font-weight: 700; }
-      .source-id { color: #6b7890; font-size: .75rem; }
-      .source-text { color: #4e5b72; margin-top: 4px; white-space: pre-wrap; }
       .composer { border-top: 1px solid #e9edf4; padding: 16px 18px 12px; }
       .metadata { display: grid; grid-template-columns: 1.1fr 1fr 1fr 1fr; gap: 9px; margin-bottom: 11px; }
       label { display: grid; gap: 5px; color: #65728a; font-size: .73rem; font-weight: 650; }
@@ -62,7 +50,7 @@
         header { align-items: flex-start; }
         .connection { padding-top: 9px; }
         #conversation { padding: 16px 12px; min-height: 280px; }
-        .message, .decision { max-width: 94%; width: 94%; }
+        .message { max-width: 94%; width: 94%; }
         .metadata { grid-template-columns: 1fr 1fr; }
       }
     </style>
@@ -76,7 +64,7 @@
       <section class="panel" aria-label="Support chat">
         <div class="chat-head"><strong>Support conversation</strong><button class="secondary" id="new-chat" type="button">New conversation</button></div>
         <div id="conversation" aria-live="polite" aria-label="Conversation">
-          <div class="intro">Hi, I’m the CloudServe support assistant. Describe the issue you’re having. I’ll check the support documentation and either share a cited answer or prepare the ticket for a support agent.</div>
+          <div class="intro">Hi, I’m the CloudServe support assistant. Describe the issue you’re having and I’ll either share an answer or send the ticket for human review.</div>
         </div>
         <form class="composer" id="ticket-form">
           <div class="metadata">
@@ -117,58 +105,10 @@
         return item;
       }
       function addDecision(data) {
-        const card = document.createElement('section');
-        card.className = `decision ${data.action === 'auto_respond' ? 'auto' : data.action === 'block' ? 'block' : 'escalate'}`;
-        const title = document.createElement('div');
-        title.className = 'decision-title';
-        title.textContent = data.action === 'auto_respond' ? 'Answer from support documentation' : data.action === 'block' ? 'Response blocked' : 'Prepared for a support agent';
-        const reason = document.createElement('p');
-        reason.textContent = data.action === 'auto_respond' ? 'The policy checks passed for this response.' : (data.reason || 'This ticket needs human support.');
-        card.append(title, reason);
-        if (data.action === 'auto_respond' && data.answer) {
-          const answer = document.createElement('p');
-          answer.textContent = data.answer;
-          card.append(answer);
-        } else if (data.escalation_summary) {
-          const summary = document.createElement('p');
-          summary.textContent = data.escalation_summary;
-          card.append(summary);
-        }
-        if (Array.isArray(data.sources) && data.sources.length) {
-          const details = document.createElement('details');
-          const summary = document.createElement('summary');
-          summary.textContent = `Sources considered (${data.sources.length})`;
-          details.append(summary);
-          for (const source of data.sources) {
-            const row = document.createElement('div');
-            row.className = 'source';
-            const sourceTitle = document.createElement('div');
-            sourceTitle.className = 'source-title';
-            sourceTitle.textContent = source.title || source.doc_id || 'Documentation source';
-            const sourceId = document.createElement('div');
-            sourceId.className = 'source-id';
-            sourceId.textContent = `${source.chunk_id || ''} · relevance ${Number(source.score || 0).toFixed(3)}`;
-            const sourceText = document.createElement('div');
-            sourceText.className = 'source-text';
-            sourceText.textContent = source.text || '';
-            row.append(sourceTitle, sourceId, sourceText);
-            details.append(row);
-          }
-          card.append(details);
-        }
-        const diagnostics = document.createElement('details');
-        const diagnosticsTitle = document.createElement('summary');
-        diagnosticsTitle.textContent = 'Decision details';
-        const diagnosticsBody = document.createElement('pre');
-        diagnosticsBody.textContent = JSON.stringify({
-          ticket_id: data.ticket_id, action: data.action, prediction: data.prediction,
-          citations: data.citations, guardrail_results: data.guardrail_results,
-          latency_ms: data.latency_ms, decision_id: data.decision_id,
-        }, null, 2);
-        diagnostics.append(diagnosticsTitle, diagnosticsBody);
-        card.append(diagnostics);
-        conversation.append(card);
-        conversation.scrollTop = conversation.scrollHeight;
+        const message = data.action === 'auto_respond' && data.answer
+          ? data.answer
+          : 'This ticket has been sent for human review.';
+        addMessage('assistant', message);
       }
       async function checkHealth() {
         try {
@@ -220,7 +160,7 @@
         conversation.replaceChildren();
         const intro = document.createElement('div');
         intro.className = 'intro';
-        intro.textContent = 'Start a new support conversation. Each message is submitted as a ticket and may be answered from documentation or routed to an agent.';
+        intro.textContent = 'Start a new support conversation. Each message is submitted as a ticket and will receive an answer or be sent for human review.';
         conversation.append(intro);
         setNextId();
         bodyInput.focus();

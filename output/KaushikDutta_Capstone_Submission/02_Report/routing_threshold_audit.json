@@ -1,0 +1,22 @@
+{
+  "method": "Stratified 80/20 development split, random_state=42; thresholds selected on holdout route labels.",
+  "training_tickets": 400,
+  "holdout_tickets": 100,
+  "holdout_intent_accuracy": 0.99,
+  "holdout_urgency_accuracy": 0.41,
+  "shared_0_55_threshold": {
+    "intent_threshold": 0.55,
+    "urgency_threshold": 0.55,
+    "auto_response_coverage": 0.18,
+    "route_accuracy": 0.51,
+    "auto_response_precision_against_expected_route": 0.7777777777777778
+  },
+  "selected_thresholds": {
+    "intent_threshold": 0.6,
+    "urgency_threshold": 0.45,
+    "auto_response_coverage": 0.52,
+    "route_accuracy": 0.75,
+    "auto_response_precision_against_expected_route": 0.8269230769230769
+  },
+  "warning": "Thresholds are provisional; this is one development holdout, not an independent assessment or probability calibration guarantee."
+}

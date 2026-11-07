@@ -1,19 +1,23 @@
 {
   "input_file": "validation_tickets.json",
   "evaluation_metadata": {
-    "started_at_utc": "2026-11-07T06:54:44.140215+00:00",
-    "finished_at_utc": "2026-11-07T06:54:45.123700+00:00",
+    "started_at_utc": "2026-11-07T07:37:52.001014+00:00",
+    "finished_at_utc": "2026-11-07T07:37:53.055945+00:00",
     "tickets_in_run": 80,
     "invocation_count": 1,
     "input_sha256": "94c5b1adc1203f06d59522a909d755e8671e9bf1b165a0bc5a74ab62501c827b",
-    "system_version": "d7ef408+dirty",
-    "source_sha256": "190171b7b4bf14c6f4563f213e841bd5c72610f5e4066bf8f32d7ba0d25304b5",
-    "ground_truth_file": "ground_truth_responses.json"
+    "system_version": "94703fd+dirty",
+    "source_sha256": "3821f6c9b5317867f7a754bd6ae4ee1f670edf90314183d33ea5ef64126c74c2",
+    "ground_truth_file": "ground_truth_responses.json",
+    "routing_thresholds": {
+      "intent_confidence": 0.6,
+      "urgency_confidence": 0.45
+    }
   },
   "volume": {
     "processed": 80,
-    "answered_automatically": 15,
-    "escalated": 65,
+    "answered_automatically": 33,
+    "escalated": 47,
     "blocked_by_guardrails": 0
   },
   "business": {
@@ -22,8 +26,8 @@
       "note": "The offline evaluator has no post-response resolution event, so system FCR cannot be observed from this input."
     },
     "auto_response_coverage": {
-      "rate": 0.1875,
-      "auto_answered_tickets": 15,
+      "rate": 0.4125,
+      "auto_answered_tickets": 33,
       "method": "Automatic response share; this is not first-contact resolution."
     },
     "historical_ticket_outcomes": {
@@ -32,7 +36,7 @@
       "repeat_contact_rate": 0.2125,
       "repeat_contact_observed_tickets": 80
     },
-    "escalation_rate": 0.8125,
+    "escalation_rate": 0.5875,
     "mean_first_reply_minutes": null,
     "median_first_reply_minutes": null,
     "observed_first_reply_timestamps": 0,
@@ -803,13 +807,13 @@
       "reference_response_used_for_generation": false
     },
     "route_accuracy_against_labels": {
-      "accuracy": 0.5375,
+      "accuracy": 0.6375,
       "labeled_tickets": 80
     },
     "latency_ms": {
-      "mean": 3.344611985812662,
-      "median": 3.2696460257284343,
-      "p95": 3.585624974220991
+      "mean": 4.287812510301592,
+      "median": 3.5510000016074628,
+      "p95": 7.863624952733517
     }
   },
   "governance": {
@@ -817,7 +821,7 @@
     "log_coverage": 1.0,
     "guardrails": {
       "activations_by_type": {
-        "confidence_floor": 59,
+        "confidence_floor": 18,
         "grounding": 0,
         "instruction_integrity": 0,
         "kill_switch": 0,
@@ -825,35 +829,35 @@
         "tone_scope": 0
       },
       "private_data_detections": 0,
-      "generated_responses": 15,
+      "generated_responses": 33,
       "automated_grounding_block_rate_proxy": 0.0,
       "hallucination_rate_proxy": 0.0,
       "citation_reference_resolution_rate": 1.0,
       "citation_accuracy_proxy": 1.0,
-      "citation_count": 15,
-      "valid_citation_count": 15,
+      "citation_count": 33,
+      "valid_citation_count": 33,
       "note": "Grounding and citation rates are automated validation proxies; human review is required to establish hallucination and citation accuracy."
     },
     "fairness_segments": {
       "customer_tier": {
         "business": {
           "count": 30,
-          "auto_response_rate": 0.23333333333333334,
+          "auto_response_rate": 0.43333333333333335,
           "historical_fcr_rate": 0.5333333333333333
         },
         "standard": {
           "count": 42,
-          "auto_response_rate": 0.14285714285714285,
+          "auto_response_rate": 0.38095238095238093,
           "historical_fcr_rate": 0.38095238095238093
         },
         "enterprise": {
           "count": 8,
-          "auto_response_rate": 0.25,
+          "auto_response_rate": 0.5,
           "historical_fcr_rate": 0.625
         },
         "quality_variation": {
           "historical_fcr_range_percentage_points": 24.404761904761905,
-          "auto_response_rate_range_percentage_points": 10.714285714285715,
+          "auto_response_rate_range_percentage_points": 11.904761904761907,
           "groups_with_historical_fcr": 3,
           "note": "Historical outcomes and routing coverage are not substitutes for human-rated response quality."
         }
@@ -861,17 +865,17 @@
       "customer_region": {
         "asia_pacific": {
           "count": 21,
-          "auto_response_rate": 0.23809523809523808,
+          "auto_response_rate": 0.6190476190476191,
           "historical_fcr_rate": 0.5238095238095238
         },
         "north_america": {
           "count": 27,
-          "auto_response_rate": 0.14814814814814814,
+          "auto_response_rate": 0.4074074074074074,
           "historical_fcr_rate": 0.4444444444444444
         },
         "europe": {
           "count": 25,
-          "auto_response_rate": 0.16,
+          "auto_response_rate": 0.28,
           "historical_fcr_rate": 0.48
         },
         "latin_america": {
@@ -881,7 +885,7 @@
         },
         "quality_variation": {
           "historical_fcr_range_percentage_points": 23.809523809523814,
-          "auto_response_rate_range_percentage_points": 13.756613756613756,
+          "auto_response_rate_range_percentage_points": 33.904761904761905,
           "groups_with_historical_fcr": 4,
           "note": "Historical outcomes and routing coverage are not substitutes for human-rated response quality."
         }
@@ -889,17 +893,17 @@
       "language_fluency": {
         "fluent": {
           "count": 61,
-          "auto_response_rate": 0.18032786885245902,
+          "auto_response_rate": 0.3770491803278688,
           "historical_fcr_rate": 0.5409836065573771
         },
         "non_fluent": {
           "count": 19,
-          "auto_response_rate": 0.21052631578947367,
+          "auto_response_rate": 0.5263157894736842,
           "historical_fcr_rate": 0.21052631578947367
         },
         "quality_variation": {
           "historical_fcr_range_percentage_points": 33.045729076790344,
-          "auto_response_rate_range_percentage_points": 3.019844693701465,
+          "auto_response_rate_range_percentage_points": 14.926660914581536,
           "groups_with_historical_fcr": 2,
           "note": "Historical outcomes and routing coverage are not substitutes for human-rated response quality."
         }

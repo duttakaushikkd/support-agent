@@ -362,6 +362,10 @@ def evaluate(input_path: Path, output_dir: Path,
             "system_version": _system_version(),
             "source_sha256": _source_hash(),
             "ground_truth_file": ground_truth_path.name if ground_truth_path and ground_truth_path.exists() else None,
+            "routing_thresholds": {
+                "intent_confidence": service.settings.auto_response_threshold,
+                "urgency_confidence": service.settings.auto_response_urgency_threshold,
+            },
         },
         "volume": {
             "processed": len(decisions), "answered_automatically": actions["auto_respond"],

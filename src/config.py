@@ -22,6 +22,7 @@ class Settings:
     ground_truth_path: Path | None = None
     retrieval_chunk_size: int = 800
     retrieval_chunk_overlap: int = 120
+    auto_response_urgency_threshold: float = 0.45
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -71,7 +72,7 @@ class Settings:
         return cls(
             data_dir=data_dir,
             database_url=os.getenv("DATABASE_URL", "sqlite:///runtime/support_agent.db"),
-            auto_response_threshold=float(os.getenv("AUTO_RESPONSE_THRESHOLD", "0.55")),
+            auto_response_threshold=float(os.getenv("AUTO_RESPONSE_THRESHOLD", "0.60")),
             retrieval_threshold=float(os.getenv("RETRIEVAL_THRESHOLD", "0.08")),
             llm_api_key=provider_key or None,
             llm_base_url=os.getenv("LLM_BASE_URL") or default_endpoint,
@@ -82,4 +83,5 @@ class Settings:
             ground_truth_path=ground_truth_path,
             retrieval_chunk_size=chunk_size,
             retrieval_chunk_overlap=chunk_overlap,
+            auto_response_urgency_threshold=float(os.getenv("AUTO_RESPONSE_URGENCY_THRESHOLD", "0.45")),
         )

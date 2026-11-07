@@ -24,6 +24,7 @@ class DecisionLog(Base):
     prediction_json: Mapped[str] = mapped_column(Text)
     sources_json: Mapped[str] = mapped_column(Text)
     threshold_applied: Mapped[float] = mapped_column(Float)
+    urgency_threshold_applied: Mapped[float | None] = mapped_column(Float, nullable=True)
     action_taken: Mapped[str] = mapped_column(String(32))
     reason: Mapped[str] = mapped_column(Text)
     guardrail_results_json: Mapped[str] = mapped_column(Text)
@@ -54,6 +55,7 @@ class DecisionStore:
             "stage": "VARCHAR(32)",
             "model_name": "VARCHAR(128)",
             "model_version": "VARCHAR(128)",
+            "urgency_threshold_applied": "FLOAT",
         }
         with self.engine.begin() as connection:
             for name, sql_type in additions.items():
@@ -61,13 +63,16 @@ class DecisionStore:
                     connection.exec_driver_sql(f"ALTER TABLE decision_log ADD COLUMN {name} {sql_type}")
 
     def save(self, ticket: NormalizedTicket, result: DecisionResult, threshold: float,
-             model_name: str = "unknown", model_version: str = "support-pipeline-v1") -> int:
+             model_name: str = "unknown", model_version: str = "support-pipeline-v1",
+             urgency_threshold: float | None = None) -> int:
         from datetime import datetime, timezone
         entry = DecisionLog(
             ticket_id=ticket.ticket_id, timestamp=datetime.now(timezone.utc).isoformat(),
             channel=ticket.channel, stage="routing",
             input_summary=json.dumps(ticket.to_dict(), ensure_ascii=False), prediction_json=json.dumps({
                 **result.prediction.__dict__,
+                "routing_thresholds": {"intent": threshold,
+                                       "urgency": urgency_threshold if urgency_threshold is not None else threshold},
                 "model": {"name": model_name, "version": model_version},
                 "models": {
                     "classifier": "scikit-learn TfidfVectorizer + calibrated LogisticRegression",
@@ -78,7 +83,9 @@ class DecisionStore:
                                     "FR-GENERATE", "FR-VALIDATE", "FR-LOG", "FR-EVALUATE"],
             }),
             sources_json=json.dumps([source.to_dict() for source in result.sources]),
-            threshold_applied=threshold, action_taken=result.action,
+            threshold_applied=threshold,
+            urgency_threshold_applied=urgency_threshold if urgency_threshold is not None else threshold,
+            action_taken=result.action,
             reason=(result.reason + (f" | escalation summary: {result.escalation_summary}"
                                      if result.escalation_summary else "")),
             guardrail_results_json=json.dumps(result.guardrail_results),

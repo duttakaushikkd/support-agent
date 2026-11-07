@@ -7,18 +7,22 @@ The API accepts one ticket. The evaluator calls the service for each input list 
 The pipeline normalizes the channel and preserves the ticket text, predicts intent
 and urgency, retrieves documentation passages, applies deterministic routing, drafts
 only if policy permits, validates each draft, and writes one SQLite decision record.
-The UI displays either the response and sources or the escalation/block reason and
-handoff summary. The compatibility route `/tickets` reaches the same handler.
+The UI displays only the drafted answer or a human-review notice. The API and SQLite
+decision log retain routing reasons, sources, citations and diagnostics. The
+compatibility route `/tickets` reaches the same handler.
 
 ## Classification and confidence
 
 Intent and urgency use separate scikit-learn `TfidfVectorizer` plus calibrated
 `LogisticRegression` classifiers trained on `development_tickets.json`. A prediction
 includes the top intent alternatives, urgency alternatives and separate confidence
-scores. The fixed 0.55 confidence floor is provisional. The evaluation harness bins
-intent confidence against labeled accuracy; it must not be described as a probability
-guarantee. Security, compliance, feature requests, unclear requests, billing and data
-residency always route to an agent.
+scores. Intent and urgency use separate provisional policy floors (0.60 and 0.45). A
+stratified 20% development holdout found the shared 0.55 floor routed only 18% of
+tickets to auto-response; the separate floors yielded 52% coverage and 82.7% precision
+against expected-route labels. Urgency accuracy on that holdout was only 41%, so the
+score is a weak signal and both floors require further validation. Security,
+compliance, feature requests, unclear requests, billing and data residency always
+route to an agent.
 
 ## Retrieval and chunking choice
 
@@ -74,9 +78,10 @@ SQLite has one durable row for each processed ticket. The row includes UTC times
 ticket ID/channel, decision stage, normalized input, classifier predictions and
 alternatives, model identity/version, retrieved source IDs and scores, threshold,
 action, reason and escalation summary, prompt version, requirement IDs, guardrail
-results, latency and error type. Existing SQLite databases are upgraded additively
-for the audit columns. The output `decisions.json` contains the matching persistent
-decision ID so run records can be reconciled.
+results, latency and error type. Both intent and urgency thresholds are persisted
+independently. Existing SQLite databases are upgraded additively for the audit
+columns. The output `decisions.json` contains the matching persistent decision ID so
+run records can be reconciled.
 
 ## Observability and deployment boundary
 

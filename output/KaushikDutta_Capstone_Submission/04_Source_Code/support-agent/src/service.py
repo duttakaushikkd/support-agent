@@ -35,7 +35,10 @@ class SupportService:
             ticket = normalize_ticket(raw_ticket)
             prediction = self.classifier.predict(ticket)
             sources = self.retriever.search(ticket.text)
-            action, reason = route(prediction, sources, self.settings.auto_response_threshold)
+            action, reason = route(
+                prediction, sources, self.settings.auto_response_threshold,
+                self.settings.auto_response_urgency_threshold,
+            )
             if action == "auto_respond" and self.settings.auto_response_kill_switch_file.exists():
                 action = "escalate"
                 reason = "automatic response kill switch is active; routed to human review"
@@ -43,7 +46,7 @@ class SupportService:
             citations: list[str] = []
             escalation_summary: str | None = None
             confidence_failed = (prediction.confidence < self.settings.auto_response_threshold
-                                 or prediction.urgency_confidence < self.settings.auto_response_threshold)
+                                 or prediction.urgency_confidence < self.settings.auto_response_urgency_threshold)
             injection_detected = has_instruction_injection(ticket.text)
             guardrails = {
                 "pii": "not_run", "grounding": "not_run",
@@ -74,6 +77,7 @@ class SupportService:
                 ticket, result, self.settings.auto_response_threshold,
                 self.generator.model_name,
                 "tfidf-calibrated-classifiers-v1+" + self.generator.model_name,
+                self.settings.auto_response_urgency_threshold,
             )
         except Exception as exc:
             # Every bad input becomes a durable escalation instead of terminating a batch run.
@@ -91,6 +95,7 @@ class SupportService:
                 ticket, result, self.settings.auto_response_threshold,
                 self.generator.model_name,
                 "tfidf-calibrated-classifiers-v1+" + self.generator.model_name,
+                self.settings.auto_response_urgency_threshold,
             )
         observe(result.action, result.latency_ms, ticket.channel, result.guardrail_results,
                 result.prediction.confidence, result.prediction.urgency_confidence)

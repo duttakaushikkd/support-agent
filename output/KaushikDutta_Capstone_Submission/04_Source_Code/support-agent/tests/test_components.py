@@ -35,11 +35,14 @@ def test_unsupported_channel_is_rejected():
 
 
 def test_routing_is_deterministic_and_safe():
-    prediction = Prediction("authentication_failure", "high", 0.95, [], 0.95)
-    assert route(prediction, [source()], 0.8)[0] == "auto_respond"
-    assert route(prediction, [source()], 0.8) == route(prediction, [source()], 0.8)
-    assert route(Prediction("security_incident", "high", 1.0, [], 1.0), [source()], 0.8)[0] == "escalate"
-    assert route(prediction, [], 0.8)[0] == "escalate"
+    prediction = Prediction("authentication_failure", "high", 0.95, [], 0.46)
+    assert route(prediction, [source()], 0.6, 0.45)[0] == "auto_respond"
+    assert route(prediction, [source()], 0.6, 0.45) == route(prediction, [source()], 0.6, 0.45)
+    assert route(Prediction("authentication_failure", "medium", 0.95, [], 0.44),
+                 [source()], 0.6, 0.45)[0] == "escalate"
+    assert route(Prediction("security_incident", "high", 1.0, [], 1.0),
+                 [source()], 0.6, 0.45)[0] == "escalate"
+    assert route(prediction, [], 0.6, 0.45)[0] == "escalate"
 
 
 def test_guardrails_block_injection_and_bad_citations():
