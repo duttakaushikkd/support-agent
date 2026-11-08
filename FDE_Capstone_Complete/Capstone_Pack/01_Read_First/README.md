@@ -1,8 +1,10 @@
+> **Student correction:** The capstone submission end date is **13 November 2026**. The September 13 date in the supplied instructions is incorrect and is superseded for this project.
+
 # Forward Deployed AI Engineering — Capstone Project
 
 ## An intelligent customer support system for CloudServe Solutions
 
-**This is an individual project. The submission deadline is 13 September at 23:59.**
+**This is an individual project. The submission deadline is 13 November 2026 at 23:59.**
 
 **The deliverable is working software.** Before anything else is marked, your repository is
 checked out onto a machine that is not yours and your harness is asked to process the full
@@ -323,7 +325,7 @@ Useful documentation:
 | **Gate cleared:** full validation set processed unattended | End of week two |
 | Evaluation run complete and requirements revised | End of week two |
 | Governance, report, video and packaging complete | End of week three |
-| **Submission uploaded** | **13 September, 23:59** |
+| **Submission uploaded** | **13 November 2026, 23:59** |
 
 ---
 

@@ -100,7 +100,7 @@ Submit one ZIP archive named exactly `FirstnameLastname_Capstone_Submission.zip`
 - **`03_Workbooks/`** — all five genuinely completed stage workbooks (discovery, requirements, prompt library, sprint plan, and requirements revision log), in PDF or DOCX, plus the effort log named `FirstnameLastname_Effort_Log.pdf`. The effort log records actual task-level hours by day and stage throughout the project, at least every second day.
 - **`04_Source_Code/`** — the complete repository as a folder or nested archive, including history, tests, and working README. It must run from a clean checkout on another machine. Include no API keys, tokens, or passwords in files or history.
 
-The archive deadline is **13 September at 23:59**. Submission within 48 hours after the deadline receives a deduction; later work is not marked without an extension agreed in advance. Before packaging, follow the README from a fresh checkout, run the full evaluation unattended in one run, reconcile its report and decision log, run the documented test command, check credentials and attribution, and confirm all four archive folders and required artefacts are present.
+The student-confirmed submission deadline is **13 November 2026**. Submission within 48 hours after the deadline receives a deduction; later work is not marked without an extension agreed in advance. Before packaging, follow the README from a fresh checkout, run the full evaluation unattended in one run, reconcile its report and decision log, run the documented test command, check credentials and attribution, and confirm all four archive folders and required artefacts are present.
 
 ## One-sentence project statement
 
