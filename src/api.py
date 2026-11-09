@@ -56,7 +56,14 @@ def health() -> dict[str, Any]:
 @app.post("/tickets", include_in_schema=False)
 def process_ticket(ticket: TicketRequest) -> dict[str, Any]:
     """Accept a single ticket; malformed JSON values are safely logged as escalations."""
-    return get_service().process(ticket.model_dump(exclude_none=True)).to_dict()
+    active = get_service()
+    result = active.process(ticket.model_dump(exclude_none=True)).to_dict()
+    result["thresholds"] = {
+        "intent_confidence": active.settings.auto_response_threshold,
+        "urgency_confidence": active.settings.auto_response_urgency_threshold,
+        "retrieval_score": active.settings.retrieval_threshold,
+    }
+    return result
 
 
 @app.get("/metrics", include_in_schema=False)

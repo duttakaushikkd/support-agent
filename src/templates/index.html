@@ -30,6 +30,10 @@
       .user .bubble { background: #245be8; color: white; border-bottom-right-radius: 5px; }
       .assistant .bubble { background: #eef2f8; color: #19243a; border-bottom-left-radius: 5px; }
       .message-meta { color: #7a879c; font-size: .72rem; padding: 0 4px; }
+      .decision-details { width: min(92%, 680px); padding: 12px 14px; border: 1px solid #dfe5ef; border-radius: 11px; background: #f8faff; color: #26334b; font-size: .82rem; line-height: 1.5; }
+      .decision-details strong { display: block; margin-bottom: 5px; }
+      .decision-details ul { margin: 4px 0 0; padding-left: 20px; }
+      .decision-details li { margin: 2px 0; overflow-wrap: anywhere; }
       .intro { max-width: 680px; padding: 16px; border: 1px solid #e1e7f1; border-radius: 13px; background: white; color: #526078; line-height: 1.55; font-size: .9rem; }
       .composer { border-top: 1px solid #e9edf4; padding: 16px 18px 12px; }
       .metadata { display: grid; grid-template-columns: 1.1fr 1fr 1fr 1fr; gap: 9px; margin-bottom: 11px; }
@@ -109,6 +113,42 @@
           ? data.answer
           : 'This ticket has been sent for human review.';
         addMessage('assistant', message);
+        const details = document.createElement('section');
+        details.className = 'decision-details';
+        const heading = document.createElement('strong');
+        heading.textContent = 'Decision details';
+        details.append(heading);
+        const list = document.createElement('ul');
+        const thresholds = data.thresholds || {};
+        const prediction = data.prediction || {};
+        const scoreText = (value) => value !== null && value !== undefined && Number.isFinite(Number(value)) ? Number(value).toFixed(4) : 'not available';
+        const addDetail = (label, value) => {
+          const item = document.createElement('li');
+          item.textContent = `${label}: ${value}`;
+          list.append(item);
+        };
+        addDetail('Score note', 'Classifier confidence scores are not calibrated probabilities; retrieval scores rank text matches.');
+        addDetail('Action', data.action || 'unknown');
+        addDetail('Routing reason', data.reason || 'not provided');
+        addDetail(`Intent: ${prediction.intent || 'unknown'} confidence`, `${scoreText(prediction.confidence)}; threshold ${scoreText(thresholds.intent_confidence)}`);
+        const intentAlternatives = (prediction.alternatives || []).map(item => `${item.value} ${scoreText(item.confidence)}`).join(', ') || 'none';
+        addDetail('Other intent scores', intentAlternatives);
+        addDetail(`Urgency: ${prediction.urgency || 'unknown'} confidence`, `${scoreText(prediction.urgency_confidence)}; threshold ${scoreText(thresholds.urgency_confidence)}`);
+        const urgencyAlternatives = (prediction.urgency_alternatives || []).map(item => `${item.value} ${scoreText(item.confidence)}`).join(', ') || 'none';
+        addDetail('Other urgency scores', urgencyAlternatives);
+        addDetail('Retrieval score threshold', scoreText(thresholds.retrieval_score));
+        const sources = data.sources || [];
+        if (sources.length) {
+          sources.forEach((source, index) => addDetail(`Retrieved source ${index + 1}: ${source.title || source.doc_id || source.chunk_id}`, `score ${scoreText(source.score)} · ${source.chunk_id || source.doc_id || 'source ID unavailable'}`));
+        } else {
+          addDetail('Retrieved sources', 'none met the retrieval threshold');
+        }
+        const guardrails = data.guardrail_results || {};
+        const guardrailSummary = Object.entries(guardrails).map(([name, result]) => `${name}: ${result}`).join(', ') || 'not reported';
+        addDetail('Guardrails', guardrailSummary);
+        details.append(list);
+        conversation.append(details);
+        conversation.scrollTop = conversation.scrollHeight;
       }
       async function checkHealth() {
         try {
