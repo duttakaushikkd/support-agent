@@ -1,1 +1,0 @@
-"""Batch evaluation entry point."""

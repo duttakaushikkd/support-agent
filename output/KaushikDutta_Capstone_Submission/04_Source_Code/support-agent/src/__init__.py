@@ -1,1 +1,0 @@
-"""CloudServe support automation service."""
